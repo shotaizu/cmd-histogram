@@ -15,16 +15,17 @@ INSTALL_DIR = $(HOME)/.local
 all: $(TARGETS)
 
 install: $(TARGETS)
-	$(CP) $(TARGETS) $(INSTALL_DIR)/bin
+	ln -sn $(PWD)/../bin/$(TARGETS) $(INSTALL_DIR)/bin
 
 uninstall:
-	$(RM) -i $(INSTALL_DIR)/bin/$(TARGETS)
+	unlink $(INSTALL_DIR)/bin/$(TARGETS)
 
 %.o: %.cpp
 	$(CXX) $(cmdhistogram_CXXFLAGS) $(cmdhistogram_LDADD) -o $@ -c $<
 
 cmdhistogram$(EXEEXT): makeHistogram.o
 	$(CXX) $(cmdhistogram_CXXFLAGS) $(cmdhistogram_LDADD) -o $@ $^
+	$(CP) $@ ../bin/
 
 clean:
 	$(RM) $(OBJECTS) $(TARGETS)
