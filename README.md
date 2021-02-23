@@ -4,7 +4,7 @@ Tool to make histogram with CERN ROOT.
 
 ## Requirement
 
-- (https://root.cern.ch/)[CERN ROOT]
+- CERN ROOT https://root.cern.ch
 
 ## Install
 
