@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <TFile.h>
 #include <TH1.h>
+#include <TGraph.h>
 #include <TMath.h>
 #include <getopt.h>
 
@@ -13,15 +14,16 @@
 void showHelp(const char *arg0){
     std::cout << arg0 << " {options}\n\n"
         << "Usage:\n"
-        << "OPTIONS: -h, --help, -o, --xmin, --xmax, --nbins, --quiet\n"
+        << "OPTIONS: -h, --help, -o, --xmin, --xmax, --nbins, --graph, --quiet\n"
         << "\t-h, --help: show this help\n"
         << "\t-o {filename}: write TH1 histogram into this file (in default, the histogram is saved in \"out.root\")\n"
         << "\t--xmin {min}: left edge of TH1F\n"
         << "\t--xmax {max}: right edge of TH1F\n"
         << "\t--nbins {nbin}: number of bins of TH1F\n"
+        << "\t--graph: not make histogram but make 2D-graph\n"
         << "\t--quiet: does not show text-historgram\n"
         << "\n"
-        << "Copyright 2020 Shota Izumiyama" << std::endl;
+        << "Copyright 2021 Shota Izumiyama" << std::endl;
     return;
 }
 
@@ -63,6 +65,7 @@ void drawHistgramCLI(const std::vector<double> &buf){
 
 
 int main (int argc, char **argv){
+    enum MODE {kHIST, kGRAPH} mode = kHIST;
 
     int c;
     int digit_optind = 0;
@@ -80,6 +83,7 @@ int main (int argc, char **argv){
             {"nbins",     required_argument, 0,  0 },
             {"help", no_argument, 0, 0},
             {"quiet", no_argument, 0, 0},
+            {"graph", no_argument, 0, 0},
             {0,         0,                 0,  0 }
         };
 
@@ -107,6 +111,9 @@ int main (int argc, char **argv){
                     case 4:
                         texthist_on = 0;
                         break;
+                    case 5:
+                        mode = kGRAPH;
+                        break;
                     default:
                         break;
                 }
@@ -131,18 +138,33 @@ int main (int argc, char **argv){
 
     TH1F *h = new TH1F("hist", ";;Entries / bin;", hist_nbins, hist_ragnge.first, hist_ragnge.second);
     h->Sumw2();
+    TGraph *g;
 
     std::vector<double> histdata;
+    std::vector<double> graphX;
 
     for(std::string line; std::getline(std::cin, line);){
         double x;
+        double y;
         try{
-            x = std::stod(line);
+            switch(mode){
+                case kHIST:
+                    y = std::stod(line);
+                    break;
+                case kGRAPH:
+                    size_t dpos = line.find(' ');
+                    std::string xstr = line.substr(0, dpos);
+                    std::string ystr = line.substr(dpos+1);
+                    x = std::stod(xstr);
+                    y = std::stod(ystr);
+                    break;
+            }
         } catch (const std::invalid_argument& e){
             continue;
         }
-        h->Fill(x);
-        histdata.push_back(x);
+        h->Fill(y);
+        histdata.push_back(y);
+        graphX.push_back(x);
     }
     if(texthist_on > 0)
         drawHistgramCLI(histdata);
@@ -154,9 +176,13 @@ int main (int argc, char **argv){
         std::cout << "StdDev: " <<  TMath::Sqrt(std::accumulate(histdata.begin(), histdata.end(), 0., calc_square) / (double)histdata.size() - TMath::Power(mean,2))  << std::endl;
         //std::cout << "StdDev(ROOT): " <<  TMath::StdDev(histdata.begin(), histdata.end())  << std::endl;
     }
-
     TFile *f = new TFile(ofname.c_str(), "RECREATE");
     h->Write();
+    if(mode==kGRAPH){
+        g = new TGraph(graphX.size(), &graphX[0], &histdata[0]);
+        g->Write("graph");
+    }
+
     f->Save();
     f->Close();
     f->Delete();
