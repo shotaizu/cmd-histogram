@@ -69,7 +69,7 @@ int main (int argc, char **argv){
 
     int c;
     int digit_optind = 0;
-    std::pair<double, double> hist_ragnge { 0., 10e-9};
+    std::pair<double, double> hist_range { 0., 10e-9};
     int hist_nbins = 200;
     std::string ofname = "out.root";
     int texthist_on = 1;
@@ -96,10 +96,10 @@ int main (int argc, char **argv){
             case 0:
                 switch(option_index){
                     case 0:
-                        hist_ragnge.first = std::stod(optarg);
+                        hist_range.first = std::stod(optarg);
                         break;
                     case 1:
-                        hist_ragnge.second = std::stod(optarg);
+                        hist_range.second = std::stod(optarg);
                         break;
                     case 2:
                         hist_nbins = std::stoi(optarg);
@@ -136,7 +136,7 @@ int main (int argc, char **argv){
     //    printf("%s ", argv[optind++]);
 
 
-    TH1F *h = new TH1F("hist", ";;Entries / bin;", hist_nbins, hist_ragnge.first, hist_ragnge.second);
+    TH1F *h = new TH1F("hist", ";;Entries / bin;", hist_nbins, hist_range.first, hist_range.second);
     h->Sumw2();
     TGraph *g;
 
