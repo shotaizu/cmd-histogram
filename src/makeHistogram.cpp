@@ -7,6 +7,7 @@
 #include <TFile.h>
 #include <TH1.h>
 #include <TGraph.h>
+#include <TGraphErrors.h>
 #include <TMath.h>
 #include <getopt.h>
 
@@ -21,6 +22,7 @@ void showHelp(const char *arg0){
         << "\t--xmax {max}: right edge of TH1F\n"
         << "\t--nbins {nbin}: number of bins of TH1F\n"
         << "\t--graph: not make histogram but make 2D-graph\n"
+        << "\t--grapherr: not make histogram but make 2D-graph with error bar\n"
         << "\t--quiet: does not show text-historgram\n"
         << "\n"
         << "Copyright 2021 Shota Izumiyama" << std::endl;
@@ -65,7 +67,7 @@ void drawHistgramCLI(const std::vector<double> &buf){
 
 
 int main (int argc, char **argv){
-    enum MODE {kHIST, kGRAPH} mode = kHIST;
+    enum MODE {kHIST, kGRAPH, kGRAPHERR} mode = kHIST;
 
     int c;
     int digit_optind = 0;
@@ -84,6 +86,7 @@ int main (int argc, char **argv){
             {"help", no_argument, 0, 0},
             {"quiet", no_argument, 0, 0},
             {"graph", no_argument, 0, 0},
+            {"grapherr", no_argument, 0, 0},
             {0,         0,                 0,  0 }
         };
 
@@ -114,6 +117,9 @@ int main (int argc, char **argv){
                     case 5:
                         mode = kGRAPH;
                         break;
+                    case 6:
+                        mode = kGRAPHERR;
+                        break;
                     default:
                         break;
                 }
@@ -139,24 +145,44 @@ int main (int argc, char **argv){
     TH1F *h = new TH1F("hist", ";;Entries / bin;", hist_nbins, hist_range.first, hist_range.second);
     h->Sumw2();
     TGraph *g;
+    TGraphErrors *gE;
 
     std::vector<double> histdata;
     std::vector<double> graphX;
+    std::vector<double> graphXE;
+    std::vector<double> graphYE;
 
     for(std::string line; std::getline(std::cin, line);){
-        double x;
-        double y;
+        double x, xe;
+        double y, ye;
+        size_t dpos;
+        std::string xstr, ystr, xestr, yestr;
         try{
             switch(mode){
                 case kHIST:
                     y = std::stod(line);
                     break;
                 case kGRAPH:
-                    size_t dpos = line.find(' ');
-                    std::string xstr = line.substr(0, dpos);
-                    std::string ystr = line.substr(dpos+1);
+                    dpos = line.find(' ');
+                    xstr = line.substr(0, dpos);
+                    ystr = line.substr(dpos+1);
                     x = std::stod(xstr);
                     y = std::stod(ystr);
+                    break;
+                case kGRAPHERR:
+                    dpos = line.find(' ');
+                    xstr = line.substr(0, dpos);
+                    line = line.substr(dpos+1);
+                    dpos = line.find(' ');
+                    ystr = line.substr(0, dpos);
+                    line = line.substr(dpos+1);
+                    dpos = line.find(' ');
+                    xestr = line.substr(0, dpos);
+                    yestr = line.substr(dpos+1);
+                    x = std::stod(xstr);
+                    y = std::stod(ystr);
+                    xe = std::stod(xestr);
+                    ye = std::stod(yestr);
                     break;
             }
         } catch (const std::invalid_argument& e){
@@ -165,6 +191,10 @@ int main (int argc, char **argv){
         h->Fill(y);
         histdata.push_back(y);
         graphX.push_back(x);
+        if( mode == kGRAPHERR ){
+          graphXE.push_back(xe);
+          graphYE.push_back(ye);
+        }
     }
     if(texthist_on > 0)
         drawHistgramCLI(histdata);
@@ -181,6 +211,9 @@ int main (int argc, char **argv){
     if(mode==kGRAPH){
         g = new TGraph(graphX.size(), &graphX[0], &histdata[0]);
         g->Write("graph");
+    } else if ( mode == kGRAPHERR ) {
+        gE = new TGraphErrors(graphX.size(), &graphX[0], &histdata[0], &graphXE[0], &graphYE[0]);
+        gE->Write("graph");
     }
 
     f->Save();
